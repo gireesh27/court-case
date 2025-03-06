@@ -63,11 +63,6 @@ export interface CaseDetailsResponse {
     detail?: ValidationError[];
   }
   
-  /** HealthResponse */
-  export interface HealthResponse {
-    /** Status */
-    status: string;
-  }
   
   /** Hearing */
   export interface Hearing {
@@ -116,17 +111,6 @@ export interface CaseDetailsResponse {
     /** Error Type */
     type: string;
   }
-  
-  export type CheckHealthData = HealthResponse;
-  
-  export interface TestCaptchaSolverParams {
-    /** Captcha Url */
-    captcha_url?: string;
-  }
-  
-  export type TestCaptchaSolverData = any;
-  
-  export type TestCaptchaSolverError = HTTPValidationError;
   
   export type SearchCaseData = CaseDetailsResponse;
   

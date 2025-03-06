@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "./Button";
 import { Search } from "lucide-react";
-import brain from "@/brain/index";
-import { CaseDetailsResponse } from "../brain/data-contracts";
+import { CaseDetailsResponse } from "@/brain/data-contracts";
+import brain from "brain"
 
 // Form schema with validation rules
 const searchFormSchema = z.object({
@@ -29,6 +29,7 @@ const searchFormSchema = z.object({
       },
       { message: `Year must be between 1900 and ${new Date().getFullYear()}` }
     ),
+
 });
 
 // Define type based on the schema
@@ -80,38 +81,20 @@ export function SearchForm({ onSuccess, onError, onSubmit }: Props) {
 
   // Form submission handler
   const handleFormSubmit = async (data: SearchFormValues) => {
-    // Notify parent component that submission has started
     if (onSubmit) {
       onSubmit();
     }
     try {
-      console.log("Form submitted with data:", data);
-      
-      // Call the search_case API endpoint
-      const response = await brain.search_case({
+      const response = await brain.searchCase({
         courtName: data.courtName,
         caseType: data.caseType,
         caseNumber: data.caseNumber,
-        caseYear: data.caseYear
+        caseYear: data.caseYear,
       });
       
-      if (response.ok) {
-        // Parse the response JSON
-        const caseDetails: CaseDetailsResponse = await response.json();
-        console.log("Case details retrieved:", caseDetails);
-        
-        // Call the success callback with the results
-        onSuccess(caseDetails);
-        
-        // Don't reset the form - keep the values so user can refine search if needed
-        // reset();
-      } else {
-        // Handle HTTP error
-        const errorData = await response.json().catch(() => ({ detail: "Unknown error occurred" }));
-        const errorMessage = 'detail' in errorData ? errorData.detail : `Error ${response.status}: ${response.statusText}`;
-        console.error("API error:", errorMessage);
-        onError(errorMessage);
-      }
+      console.log("Case details retrieved:", response);
+      onSuccess(response);
+      
     } catch (error) {
       console.error("Error submitting form:", error);
       onError(error instanceof Error ? error.message : "An unexpected error occurred");
@@ -204,7 +187,7 @@ export function SearchForm({ onSuccess, onError, onSubmit }: Props) {
       {/* Form Instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-blue-800 text-sm">
         <p>
-          <strong>Note:</strong> All fields marked with <span className="text-red-500">*</span> are required. Our system will automatically handle CAPTCHA verification for you.
+          <strong>Note:</strong> All fields marked with <span className="text-red-500">*</span> are required. You must enter the CAPTCHA text displayed on the court website.
         </p>
       </div>
 

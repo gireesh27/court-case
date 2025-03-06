@@ -11,15 +11,10 @@ import random
 from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 
-# For CAPTCHA handling
-from PIL import Image, ImageEnhance, ImageFilter
-import pytesseract
-import cv2
-import numpy as np
+# CAPTCHA imports removed
 from enum import Enum
 import os
 import uuid
-import databutton as db  # For storing failed CAPTCHAs for analysis
 
 # Create API Router
 router = APIRouter(prefix="/court-data", tags=["court-data"])
@@ -30,6 +25,7 @@ class CaseSearchRequest(BaseModel):
     caseType: str = Field(..., description="Type of the case")
     caseNumber: str = Field(..., description="Case number")
     caseYear: str = Field(..., description="Year of the case")
+    captchaText: Optional[str] = Field(None, description="CAPTCHA text entered by user")
     
     @validator('caseNumber')
     def validate_case_number(cls, v):
@@ -86,44 +82,22 @@ class CaseDetailsResponse(BaseModel):
     nextHearingDate: Optional[str] = None
 
 # API Endpoint for court case search
-# Test endpoint for CAPTCHA solving
-@router.post("/test-captcha", tags=["captcha"])
-async def test_captcha_solver(captcha_url: str = None):
-    """Test the CAPTCHA solver with a given URL or example CAPTCHA"""
-    try:
-        solver = CaptchaSolver()
-        
-        if captcha_url:
-            # Fetch the captcha from the provided URL
-            session = requests.Session()
-            response = session.get(captcha_url, timeout=10)
-            response.raise_for_status()
-            captcha_image = response.content
-        else:
-            # Use a sample CAPTCHA image for testing
-            # In a real implementation, you should store some sample CAPTCHAs
-            # for testing purposes
-            return {"error": "Please provide a captcha_url parameter"}
-        
-        # Solve the CAPTCHA
-        result = solver.solve_captcha(captcha_image)
-        
-        # Get solving statistics
-        stats = solver.get_statistics()
-        
-        return {
-            "success": bool(result),
-            "result": result,
-            "statistics": stats
-        }
-    except Exception as e:
-        return {"error": str(e)}
+# CAPTCHA solver endpoint removed
 
 @router.post("/search", response_model=CaseDetailsResponse)
 async def search_case(request: CaseSearchRequest):
     try:
         # Log the search request
         print(f"Searching for case: {request.caseNumber}/{request.caseYear} in {request.courtName} ({request.caseType})")
+        
+        # Check that CAPTCHA text was provided
+        if not request.captchaText:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="CAPTCHA text is required to search for cases"
+            )
+            
+        print(f"Using CAPTCHA text: {request.captchaText}")
         
         # TODO: In a production environment, this would use the actual scraper
         # For now, we'll continue to return mock data as we need the real Northeast court portal URL
@@ -135,7 +109,8 @@ async def search_case(request: CaseSearchRequest):
         #    request.courtName,
         #    request.caseType,
         #    request.caseNumber,
-        #    request.caseYear
+        #    request.caseYear,
+        #    request.captchaText  # Pass the CAPTCHA text provided by the user
         # )
         # 
         # return CaseDetailsResponse(**result)
@@ -219,297 +194,14 @@ async def search_case(request: CaseSearchRequest):
         )
 
 
-# Define preprocessing strategies for CAPTCHA images
-class PreprocessingStrategy(Enum):
-    BASIC = "basic"                  # Basic grayscale + threshold
-    CONTRAST_ENHANCEMENT = "contrast"  # Increase contrast before processing
-    NOISE_REDUCTION = "noise"        # Apply noise reduction filters
-    CHARACTER_SEGMENTATION = "segment"  # Try to segment characters
-    ADAPTIVE_THRESHOLD = "adaptive"  # Use adaptive thresholding
-    MORPHOLOGICAL = "morphological"  # Apply morphological operations
-
-# Model for CAPTCHA extraction result
-class CaptchaExtractionResult:
-    def __init__(self, image, url="", page_title="", page_url=""):
-        self.image = image
-        self.url = url
-        self.page_title = page_title
-        self.page_url = page_url
-
-# CAPTCHA Solving Logic
-class CaptchaSolver:
-    def __init__(self):
-        # Initialize OCR settings
-        self.max_retries = 3
-        self.preprocessing_strategies = [
-            PreprocessingStrategy.BASIC,
-            PreprocessingStrategy.CONTRAST_ENHANCEMENT,
-            PreprocessingStrategy.ADAPTIVE_THRESHOLD,
-            PreprocessingStrategy.MORPHOLOGICAL,
-            PreprocessingStrategy.NOISE_REDUCTION,
-            PreprocessingStrategy.CHARACTER_SEGMENTATION
-        ]
-        
-        # Additional settings for OCR
-        self.psm_options = [8, 7, 6, 13]  # Different page segmentation modes to try
-        self.oem_options = [3, 1]  # Different OCR Engine modes
-        
-        # Statistics for debugging and improvement
-        self.success_count = 0
-        self.failure_count = 0
-        self.strategy_success = {strategy: 0 for strategy in self.preprocessing_strategies}
-        
-    def solve_captcha(self, captcha_image, save_failures=True):
-        """
-        Solve the CAPTCHA using OCR techniques with multiple strategies
-        
-        Args:
-            captcha_image: The captcha image as bytes, base64 string, or PIL Image
-            save_failures: Whether to save failed captchas for analysis
-            
-        Returns:
-            str: The solved captcha text
-        """
-        try:
-            # Convert image to format suitable for OCR
-            image = self._convert_to_pil_image(captcha_image)
-            if not image:
-                return ""
-                
-            # Save original image for debugging if needed
-            original_image = image.copy()
-            
-            # Try different preprocessing strategies and OCR configurations until one works
-            all_results = []
-            
-            # Try each preprocessing strategy
-            for strategy in self.preprocessing_strategies:
-                try:
-                    # Apply the preprocessing strategy
-                    processed_image = self._preprocess_image(image, strategy)
-                    if processed_image is None:
-                        continue
-                    
-                    # Try different OCR configurations
-                    for psm in self.psm_options:
-                        for oem in self.oem_options:
-                            try:
-                                # Configure OCR parameters
-                                config = f'--oem {oem} --psm {psm} -c tessedit_char_whitelist=0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-                                
-                                # Perform OCR
-                                text = pytesseract.image_to_string(processed_image, config=config).strip()
-                                
-                                # Clean up the text
-                                text = text.replace(" ", "").replace("\n", "").strip()
-                                
-                                # Check if we got something reasonable
-                                if text and len(text) >= 4 and text.isalnum():
-                                    # Log the successful strategy
-                                    self.success_count += 1
-                                    self.strategy_success[strategy] += 1
-                                    print(f"CAPTCHA solved successfully using strategy: {strategy.value}, psm: {psm}, oem: {oem}")
-                                    return text
-                                
-                                # Save the result
-                                if text:
-                                    all_results.append((text, strategy, psm, oem))
-                            except Exception as e:
-                                print(f"Error in OCR with strategy {strategy.value}, PSM {psm}, OEM {oem}: {str(e)}")
-                                continue
-                except Exception as e:
-                    print(f"Error applying preprocessing strategy {strategy.value}: {str(e)}")
-                    continue
-            
-            # If all strategies failed but we have some results, use the most common one
-            if all_results:
-                # Group by text and count occurrences
-                text_counts = {}
-                for text, _, _, _ in all_results:
-                    text_counts[text] = text_counts.get(text, 0) + 1
-                
-                # Get the most common text
-                most_common_text = max(text_counts.items(), key=lambda x: x[1])[0]
-                if most_common_text:
-                    print(f"Using most common OCR result: {most_common_text}")
-                    return most_common_text
-            
-            # If we get here, all strategies failed
-            self.failure_count += 1
-            
-            # Save the failed captcha for analysis if requested
-            if save_failures:
-                self._save_failed_captcha(original_image)
-            
-            return ""
-            
-        except Exception as e:
-            print(f"Critical error solving captcha: {str(e)}")
-            self.failure_count += 1
-            return ""
-    
-    def _convert_to_pil_image(self, captcha_image):
-        """Convert various image formats to PIL Image"""
-        try:
-            if isinstance(captcha_image, str) and captcha_image.startswith('data:image'):
-                # Handle base64 image
-                image_data = base64.b64decode(captcha_image.split(',')[1])
-                return Image.open(io.BytesIO(image_data))
-            elif isinstance(captcha_image, bytes):
-                # Handle bytes
-                return Image.open(io.BytesIO(captcha_image))
-            elif isinstance(captcha_image, Image.Image):
-                # Handle PIL Image
-                return captcha_image
-            elif isinstance(captcha_image, np.ndarray):
-                # Handle numpy array (OpenCV image)
-                return Image.fromarray(captcha_image)
-            else:
-                print(f"Unsupported image type: {type(captcha_image)}")
-                return None
-        except Exception as e:
-            print(f"Error converting image: {str(e)}")
-            return None
-    
-    def _preprocess_image(self, image, strategy):
-        """Apply various preprocessing strategies to the image"""
-        try:
-            # Convert to OpenCV format if needed
-            if isinstance(image, Image.Image):
-                cv_image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-            else:
-                cv_image = image
-            
-            # Convert to grayscale (common for all strategies)
-            gray = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY) if len(cv_image.shape) > 2 else cv_image
-            
-            # Apply specific strategy
-            if strategy == PreprocessingStrategy.BASIC:
-                # Basic binary threshold
-                _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
-                return Image.fromarray(thresh)
-                
-            elif strategy == PreprocessingStrategy.CONTRAST_ENHANCEMENT:
-                # Enhance contrast using PIL
-                pil_image = Image.fromarray(gray)
-                enhancer = ImageEnhance.Contrast(pil_image)
-                enhanced = enhancer.enhance(2.0)  # Increase contrast by factor of 2
-                # Then apply threshold
-                enhanced_array = np.array(enhanced)
-                _, thresh = cv2.threshold(enhanced_array, 150, 255, cv2.THRESH_BINARY_INV)
-                return Image.fromarray(thresh)
-                
-            elif strategy == PreprocessingStrategy.NOISE_REDUCTION:
-                # Apply blur to reduce noise, then threshold
-                denoised = cv2.GaussianBlur(gray, (3, 3), 0)
-                _, thresh = cv2.threshold(denoised, 150, 255, cv2.THRESH_BINARY_INV)
-                # Apply morphological operations to remove small noise
-                kernel = np.ones((2, 2), np.uint8)
-                cleaned = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
-                return Image.fromarray(cleaned)
-                
-            elif strategy == PreprocessingStrategy.CHARACTER_SEGMENTATION:
-                # Try to segment characters for better recognition
-                # First apply threshold to get a binary image
-                _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-                
-                # Find contours (potential characters)
-                contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                
-                # If we found at least some contours, create a clean image with only the characters
-                if len(contours) > 0:
-                    # Create a blank image (white background)
-                    result = np.ones_like(gray) * 255
-                    
-                    # Filter contours by size (to eliminate noise)
-                    min_area = 50  # Adjust based on captcha characteristics
-                    filtered_contours = [cnt for cnt in contours if cv2.contourArea(cnt) > min_area]
-                    
-                    # Draw only the character contours
-                    cv2.drawContours(result, filtered_contours, -1, (0), thickness=cv2.FILLED)
-                    
-                    return Image.fromarray(result)
-                else:
-                    # Fallback to basic if no contours found
-                    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
-                    return Image.fromarray(thresh)
-                    
-            elif strategy == PreprocessingStrategy.ADAPTIVE_THRESHOLD:
-                # Use adaptive threshold to account for different lighting conditions
-                adaptive_thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                                     cv2.THRESH_BINARY_INV, 11, 2)
-                # Clean up with morphology
-                kernel = np.ones((2, 2), np.uint8)
-                cleaned = cv2.morphologyEx(adaptive_thresh, cv2.MORPH_OPEN, kernel)
-                return Image.fromarray(cleaned)
-                
-            elif strategy == PreprocessingStrategy.MORPHOLOGICAL:
-                # Apply morphological transformations
-                # First get binary image
-                _, binary = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY_INV)
-                
-                # Apply dilation followed by erosion to close gaps in characters
-                kernel = np.ones((2, 2), np.uint8)
-                dilation = cv2.dilate(binary, kernel, iterations=1)
-                closing = cv2.erode(dilation, kernel, iterations=1)
-                
-                # Apply opening to remove small noise
-                opening = cv2.morphologyEx(closing, cv2.MORPH_OPEN, kernel)
-                return Image.fromarray(opening)
-            
-            # Default fallback
-            return Image.fromarray(gray)
-            
-        except Exception as e:
-            print(f"Error in preprocessing strategy {strategy.value}: {str(e)}")
-            return None
-    
-    def _save_failed_captcha(self, image):
-        """Save failed captchas for later analysis"""
-        try:
-            # Generate a unique ID for this captcha
-            captcha_id = f"failed_captcha_{uuid.uuid4().hex[:8]}_{int(time.time())}.png"
-            
-            # Convert to bytes
-            img_bytes = io.BytesIO()
-            image.save(img_bytes, format='PNG')
-            img_bytes.seek(0)
-            
-            # Save to databutton storage for analysis
-            db.storage.binary.put(captcha_id, img_bytes.getvalue())
-            
-            print(f"Saved failed captcha as {captcha_id} for analysis")
-        except Exception as e:
-            print(f"Error saving failed captcha: {str(e)}")
-    
-    def get_statistics(self):
-        """Get statistics about captcha solving performance"""
-        total = self.success_count + self.failure_count
-        success_rate = (self.success_count / total) * 100 if total > 0 else 0
-        
-        strategy_stats = {}
-        for strategy in self.preprocessing_strategies:
-            strategy_stats[strategy.value] = {
-                "count": self.strategy_success[strategy],
-                "rate": (self.strategy_success[strategy] / self.success_count) * 100 if self.success_count > 0 else 0
-            }
-            
-        return {
-            "total_attempts": total,
-            "successes": self.success_count,
-            "failures": self.failure_count,
-            "success_rate": success_rate,
-            "strategy_stats": strategy_stats
-        }
+# CAPTCHA solving logic removed
 
 
 # Court Portal Scraper
 class CourtPortalScraper:
     def __init__(self):
         self.session = requests.Session()
-        self.captcha_solver = CaptchaSolver()
         self.base_url = "https://northeast-courts.gov.in"  # Example URL, replace with actual URL
-        self.max_captcha_attempts = 5
         
         # Set up retry mechanisms - add headers to mimic a real browser
         self.session.headers.update({
@@ -520,7 +212,7 @@ class CourtPortalScraper:
             'Upgrade-Insecure-Requests': '1',
         })
         
-    def search_case(self, court_name, case_type, case_number, case_year):
+    def search_case(self, court_name, case_type, case_number, case_year, captcha_text):
         """
         Search for a case in the Northeast court portal with robust error handling and retries
         
@@ -556,38 +248,11 @@ class CourtPortalScraper:
                     time.sleep(2)  # Add delay before retry
                     continue
                 
-                # Try solving the CAPTCHA with multiple attempts if needed
-                captcha_text = ""
-                captcha_attempts = 0
+                # Step 3: Use user-provided CAPTCHA text
+                print(f"Using user-provided CAPTCHA text: {captcha_text}")
                 
-                while not captcha_text and captcha_attempts < self.max_captcha_attempts:
-                    # Step 3: Solve CAPTCHA
-                    captcha_text = self.captcha_solver.solve_captcha(captcha_result.image)
-                    
-                    if not captcha_text:
-                        print(f"Failed to solve CAPTCHA, attempt {captcha_attempts + 1}/{self.max_captcha_attempts}")
-                        captcha_attempts += 1
-                        
-                        # If we have more attempts left, try to get a new CAPTCHA
-                        if captcha_attempts < self.max_captcha_attempts:
-                            # Refresh the page to get a new CAPTCHA
-                            response = self.session.get(search_url, timeout=30)
-                            soup = BeautifulSoup(response.text, 'html.parser')
-                            captcha_result = self._extract_captcha(soup, search_url)
-                            
-                            if not captcha_result or not captcha_result.image:
-                                print("Failed to extract new CAPTCHA image")  
-                                break
-                                
-                            # Add delay to avoid rate limiting
-                            time.sleep(1)
-                
-                if not captcha_text:
-                    print("Failed to solve CAPTCHA after multiple attempts")  
-                    # Try again from the beginning
-                    continue
-                
-                print(f"Solved CAPTCHA: {captcha_text}")
+                # No need to check if captcha_text exists since it's required
+                print(f"Using CAPTCHA text: {captcha_text}")
                 
                 # Step 4: Submit search form with CAPTCHA
                 form_data = self._prepare_form_data(soup, {
@@ -678,7 +343,7 @@ class CourtPortalScraper:
         raise Exception(f"Failed to scrape court portal after {max_attempts} attempts")
     
     def _extract_captcha(self, soup, page_url):
-        """Extract CAPTCHA image from the page"""
+        """Extract CAPTCHA image URL from the page"""
         try:
             # Try different strategies to find the CAPTCHA image
             captcha_img = soup.find('img', {'id': 'captcha'}) or \
@@ -710,20 +375,18 @@ class CourtPortalScraper:
                 else:
                     captcha_img_url = f"{self.base_url.rstrip('/')}/{captcha_img_url}"
             
-            # Get the captcha image
-            print(f"Fetching CAPTCHA image from: {captcha_img_url}")
-            captcha_img_response = self.session.get(captcha_img_url, timeout=30)
-            captcha_img_response.raise_for_status()
-            
-            # Create a PIL image from the response content
-            captcha_image = Image.open(io.BytesIO(captcha_img_response.content))
-            
             # Get page title if available
             page_title = soup.find('title').text.strip() if soup.find('title') else ""
             
-            # Return the extraction result
-            return CaptchaExtractionResult(
-                image=captcha_image,
+            # Just return the URL and metadata
+            class CaptchaInfo:
+                def __init__(self, url, page_title, page_url):
+                    self.url = url
+                    self.page_title = page_title
+                    self.page_url = page_url
+                    self.image = None  # No longer downloading the image
+            
+            return CaptchaInfo(
                 url=captcha_img_url,
                 page_title=page_title,
                 page_url=page_url

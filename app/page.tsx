@@ -1,6 +1,6 @@
+"use client"
 import React from "react";
-import { useNavigate } from "react-router-dom";
-
+import  Link  from "next/link";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { Button } from "@/components/Button";
@@ -8,13 +8,6 @@ import { FeatureCard } from "@/components/FeatureCard";
 import { Search, FileText, Scale, Clock, Eye, Shield } from "lucide-react";
 
 export default function App() {
-  const navigate = useNavigate();
-  
-  // Handle search button click
-  const handleSearchClick = () => {
-    navigate("/Search");
-  };
-
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header />
@@ -30,14 +23,16 @@ export default function App() {
               <p className="text-lg text-gray-600 mb-8">
                 JusticeLens provides automatic court case information retrieval from the Northeast court portal without manual CAPTCHA entry.
               </p>
+              <Link href="/Search">
               <Button 
                 variant="ghost"
                 size="lg"
-                onClick={handleSearchClick}
+                onClick={()=>{}}
                 className="font-medium"
               >
                 Start Searching Cases
               </Button>
+              </Link>
             </div>
             <div className="md:w-1/2">
               <div className="relative bg-white rounded-lg shadow-xl p-8 border border-gray-200">
@@ -209,14 +204,16 @@ export default function App() {
             <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
               Start searching for case details with our automated system that handles CAPTCHA verification for you.
             </p>
+            <Link href={"/Search"}>
             <Button 
               variant="outline" 
               size="lg"
-              onClick={handleSearchClick}
+              onClick={()=>{}}
               className="bg-white text-indigo-700 hover:bg-gray-100 font-medium"
             >
               Start Case Search Now
             </Button>
+            </Link>
             <p className="mt-6 text-sm opacity-80">
               No account required. Simple and efficient access to court information.
             </p>
