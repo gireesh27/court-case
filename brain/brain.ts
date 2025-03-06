@@ -5,11 +5,10 @@ import {
 } from "./data-contracts";
 
 export class Brain {
-  static searchCase(arg0: { courtName: string; caseType: string; caseNumber: string; caseYear: string; }) {
-    throw new Error("Method not implemented.");
-  }
+  private readonly API_ENDPOINT = '/api/court-data';
+
   async searchCase(data: CaseSearchRequest): Promise<SearchCaseData> {
-    const response = await fetch('/api/search', {
+    const response = await fetch(this.API_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -18,13 +17,13 @@ export class Brain {
     });
 
     if (!response.ok) {
-      throw new Error();
+      const errorData = await response.json();
+      throw new Error(errorData);
     }
 
-    return await response.json();
+    return response.json();
   }
 }
 
-// Create and export a default instance
 export const brain = new Brain();
 export default brain;

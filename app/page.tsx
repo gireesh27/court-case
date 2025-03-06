@@ -1,4 +1,4 @@
-"use client"
+
 import React from "react";
 import  Link  from "next/link";
 import { Header } from "@/components/Header";
@@ -27,7 +27,7 @@ export default function App() {
               <Button 
                 variant="ghost"
                 size="lg"
-                onClick={()=>{}}
+                
                 className="font-medium"
               >
                 Start Searching Cases
@@ -204,11 +204,10 @@ export default function App() {
             <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
               Start searching for case details with our automated system that handles CAPTCHA verification for you.
             </p>
-            <Link href={"/Search"}>
+            <Link href="/Search">
             <Button 
               variant="outline" 
               size="lg"
-              onClick={()=>{}}
               className="bg-white text-indigo-700 hover:bg-gray-100 font-medium"
             >
               Start Case Search Now

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { Button } from "./Button";
 import { Search } from "lucide-react";
 import { CaseDetailsResponse } from "@/brain/data-contracts";
-import brain from "brain"
+import brain from "@/brain/brain"
 
 // Form schema with validation rules
 const searchFormSchema = z.object({
