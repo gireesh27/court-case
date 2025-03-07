@@ -1,7 +1,8 @@
+"use client"
 import React, { useState } from 'react';
 import { Button } from './Button';
-import { searchCase, insertCaseWithDetails, generateMockCaseData } from '../lib/db.utils';
-import { CaseDetails } from '../lib/database.types';
+import { searchCase, insertCaseWithDetails, generateMockCaseData } from '@/lib/db.utils';
+import { CaseDetails } from '@/lib/database.types';
 
 export function TestDatabaseOperations() {
   const [status, setStatus] = useState<'idle' | 'inserting' | 'searching'>('idle');

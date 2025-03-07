@@ -23,7 +23,7 @@ export default function App() {
               <p className="text-lg text-gray-600 mb-8">
                 JusticeLens provides automatic court case information retrieval from the Northeast court portal without manual CAPTCHA entry.
               </p>
-              <Link href="/Search">
+              <Link href="/search">
               <Button 
                 variant="ghost"
                 size="lg"
@@ -204,7 +204,7 @@ export default function App() {
             <p className="text-lg mb-8 max-w-2xl mx-auto opacity-90">
               Start searching for case details with our automated system that handles CAPTCHA verification for you.
             </p>
-            <Link href="/Search">
+            <Link href="/search">
             <Button 
               variant="outline" 
               size="lg"
@@ -219,7 +219,6 @@ export default function App() {
           </div>
         </div>
       </section>
-      
       <Footer />
     </div>
   );

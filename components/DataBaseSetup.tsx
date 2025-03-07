@@ -1,8 +1,9 @@
+"use client"
 import React, { useState } from 'react';
 import { Button } from './Button';
-import { setupSupabaseCredentials, testConnection } from '../lib/supabase';
-import { initializeDatabase } from '../lib/db.utils';
-import { useNavigate } from 'react-router-dom';
+import { setupSupabaseCredentials, testConnection } from '@/lib/supabase';
+import { initializeDatabase } from '@/lib/db.utils';
+import Link from 'next/link';
 
 export function DatabaseSetup() {
   const [supabaseUrl, setSupabaseUrl] = useState('');
@@ -10,7 +11,6 @@ export function DatabaseSetup() {
   const [status, setStatus] = useState<'idle' | 'testing' | 'initializing'>('idle');
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
-  const navigate = useNavigate();
 
   const handleTestConnection = async () => {
     if (!supabaseUrl || !supabaseKey) {
@@ -138,13 +138,14 @@ export function DatabaseSetup() {
       </div>
       
       <div className="mt-6 flex justify-center">
+      <Link href="/">
         <Button 
-          onClick={() => navigate('/')}
           variant="outline"
           className="mr-2"
         >
           Go Home
         </Button>
+        </Link>
         <Button 
           onClick={() => {
             // Request to save Supabase credentials as secrets
