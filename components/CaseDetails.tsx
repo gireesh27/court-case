@@ -1,8 +1,8 @@
-import React, { useState } from "react";
-import { CaseDetailsResponse, Hearing, Order, Judgment } from "@/brain/data-contracts";
+import React from "react";
 import { Building2, Gavel, User, Users, Calendar, Clock, BookOpen, FileText } from "lucide-react";
-import { cn } from "../lib/cn"
+import { cn } from "@/lib/cn"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/Tabs";
+import { CaseDetailsResponse, Hearing, Judgment, Order } from "@/types/types";
 
 interface Props {
   caseDetails: CaseDetailsResponse;
@@ -13,9 +13,11 @@ interface Props {
   isLoading?: boolean;
 }
 
-export function CaseDetails({ caseDetails, isLoading = false }: Props) {
-  const { caseInfo, hearings, orders, judgments, nextHearingDate } = caseDetails;
-  const [activeTab, setActiveTab] = useState("case-info");
+export function CaseDetails({ caseDetails, isLoading }: Props) {
+  if (!caseDetails) {
+    return null;
+  }
+  const { caseInfo, hearings = [], orders = [], judgments = [], nextHearingDate } = caseDetails;
   
   // Handle print functionality
   const handlePrint = () => {

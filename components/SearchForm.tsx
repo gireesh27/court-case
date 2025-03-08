@@ -4,10 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "./Button";
 import { Search } from "lucide-react";
-import { CaseDetailsResponse } from "@/brain/data-contracts";
-import brain from "@/brain/brain"
+import { generateMockCaseData } from "@/data/data";
 
-// Form schema with validation rules
 const searchFormSchema = z.object({
   courtName: z.string({
     required_error: "Please select a court",
@@ -32,24 +30,22 @@ const searchFormSchema = z.object({
 
 });
 
-// Define type based on the schema
 type SearchFormValues = z.infer<typeof searchFormSchema>;
 
-// Props interface
-interface Props {
-  onSuccess: (results: CaseDetailsResponse) => void;
-  onError: (message: string) => void;
-  onSubmit?: () => void; // Optional callback when form is submitted (before API call)
-}
+type Props = {
+  onSuccess: (data: any) => void; 
+  onError: (error: string) => void; 
+  onSubmit?: () => void;
+};
 
 export function SearchForm({ onSuccess, onError, onSubmit }: Props) {
-  // Initialize form with react-hook-form and zod validation
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<SearchFormValues>({
+  } 
+  = useForm<SearchFormValues>({
     resolver: zodResolver(searchFormSchema),
     defaultValues: {
       courtName: "",
@@ -79,22 +75,21 @@ export function SearchForm({ onSuccess, onError, onSubmit }: Props) {
     "Juvenile",
   ];
 
-  // Form submission handler
   const handleFormSubmit = async (data: SearchFormValues) => {
     if (onSubmit) {
       onSubmit();
     }
     try {
-      const response = await brain.searchCase({
+      const response = generateMockCaseData({
         courtName: data.courtName,
         caseType: data.caseType,
         caseNumber: data.caseNumber,
-        caseYear: data.caseYear,
+        caseYear: data.caseYear
       });
-      
+  
       console.log("Case details retrieved:", response);
       onSuccess(response);
-      
+  
     } catch (error) {
       console.error("Error submitting form:", error);
       onError(error instanceof Error ? error.message : "An unexpected error occurred");
