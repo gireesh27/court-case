@@ -7,6 +7,10 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUz
 
 // Create typed client
 export const supabase = createClient<Database>( supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true
+  },
   db: {
     schema: 'public'
   }

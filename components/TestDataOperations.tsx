@@ -25,7 +25,12 @@ export function TestDatabaseOperations() {
     setInsertedCaseId(null);
 
     try {
-      const mockData = generateMockCaseData();
+      const mockData = generateMockCaseData({
+        courtName: 'Northeast District Court',
+        caseType: 'Civil',
+        caseNumber: '',
+        caseYear: new Date().getFullYear().toString()
+      });
       const result = await insertCaseWithDetails(mockData);
       
       setIsSuccess(result.success);

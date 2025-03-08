@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { CaseDetails, HearingRow, JudgmentRow, OrderRow } from './database.types';
+import { CaseSearchRequest } from '@/types/types';
 
 // SQL to create the necessary tables
 export const createTablesSql = `
@@ -288,7 +289,7 @@ export async function insertCaseWithDetails(caseDetails: CaseDetails): Promise<{
 }
 
 // Generate mock data for testing
-export function generateMockCaseData() {
+export function generateMockCaseData(params: CaseSearchRequest) {
   const mockCaseDetails: CaseDetails = {
     caseInfo: {
       id: 0, // This will be assigned by the database
@@ -327,3 +328,18 @@ export function generateMockCaseData() {
   
   return mockCaseDetails;
 }
+interface SupabaseCredentials {
+  url: string;
+  key: string;
+}
+
+export const getSupabaseCredentials = (): SupabaseCredentials | null => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !key) {
+      return null;
+  }
+
+  return { url, key };
+};
